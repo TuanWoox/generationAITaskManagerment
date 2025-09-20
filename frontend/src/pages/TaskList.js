@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTasks, useDeleteTask, useUpdateTask } from '../hooks/useTasks';
+import ConfirmModal from '../components/ConfirmModal';
+import TaskCard from '../components/TaskCard';
 
 const TaskList = () => {
   const { data: tasks, isLoading, error } = useTasks();
   const deleteTaskMutation = useDeleteTask();
   const updateTaskMutation = useUpdateTask();
+  
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    taskId: null,
+    taskTitle: ''
+  });
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      deleteTaskMutation.mutate(id);
+  const handleDelete = (id, title) => {
+    setDeleteModal({
+      isOpen: true,
+      taskId: id,
+      taskTitle: title
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteModal.taskId) {
+      deleteTaskMutation.mutate(deleteModal.taskId);
+      setDeleteModal({ isOpen: false, taskId: null, taskTitle: '' });
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModal({ isOpen: false, taskId: null, taskTitle: '' });
   };
 
   const handleToggleComplete = (task) => {
@@ -61,64 +82,27 @@ const TaskList = () => {
       ) : (
         <div className="space-y-4">
           {tasks?.map((task) => (
-            <div
+            <TaskCard
               key={task._id}
-              className="bg-white rounded-lg shadow-md p-6 border border-gray-200"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => handleToggleComplete(task)}
-                    className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                  <h3
-                    className={`text-lg font-medium ${
-                      task.completed
-                        ? 'line-through text-gray-500'
-                        : 'text-gray-800'
-                    }`}
-                  >
-                    {task.title}
-                  </h3>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      task.completed
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {task.completed ? 'Completed' : 'Pending'}
-                  </span>
-                  
-                  <Link
-                    to={`/edit-task/${task._id}`}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Edit
-                  </Link>
-                  
-                  <button
-                    onClick={() => handleDelete(task._id)}
-                    className="text-red-600 hover:text-red-800 font-medium"
-                    disabled={deleteTaskMutation.isLoading}
-                  >
-                    {deleteTaskMutation.isLoading ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mt-2 text-sm text-gray-500">
-                Created: {new Date(task.createdAt).toLocaleDateString()}
-              </div>
-            </div>
+              task={task}
+              onToggleComplete={handleToggleComplete}
+              onDelete={handleDelete}
+              isDeleting={deleteTaskMutation.isLoading}
+            />
           ))}
         </div>
       )}
+      
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${deleteModal.taskTitle}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deleteTaskMutation.isLoading}
+      />
     </div>
   );
 };

@@ -30,8 +30,13 @@ export const useCreateTask = () => {
   
   return useMutation({
     mutationFn: (taskData) => taskAPI.createTask(taskData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: (response) => {
+      // Update the cache directly instead of invalidating
+      queryClient.setQueryData(['tasks'], (oldTasks) => {
+        if (!oldTasks) return [response.data];
+        // Add the new task to the beginning of the array (since backend sorts by createdAt desc)
+        return [response.data, ...oldTasks];
+      });
     },
   });
 };
@@ -42,8 +47,17 @@ export const useUpdateTask = () => {
   
   return useMutation({
     mutationFn: ({ id, taskData }) => taskAPI.updateTask(id, taskData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: (response, { id }) => {
+      // Update the cache directly instead of invalidating
+      queryClient.setQueryData(['tasks'], (oldTasks) => {
+        if (!oldTasks) return [];
+        return oldTasks.map(task => 
+          task._id === id ? response.data : task
+        );
+      });
+      
+      // Also update the individual task cache if it exists
+      queryClient.setQueryData(['task', id], response.data);
     },
   });
 };
@@ -54,8 +68,15 @@ export const useDeleteTask = () => {
   
   return useMutation({
     mutationFn: (id) => taskAPI.deleteTask(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: (response, id) => {
+      // Update the cache directly instead of invalidating
+      queryClient.setQueryData(['tasks'], (oldTasks) => {
+        if (!oldTasks) return [];
+        return oldTasks.filter(task => task._id !== id);
+      });
+      
+      // Remove the individual task from cache
+      queryClient.removeQueries({ queryKey: ['task', id] });
     },
   });
 };

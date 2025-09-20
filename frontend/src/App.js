@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import Navbar from './components/Navbar';
 import TaskList from './pages/TaskList';
 import TaskForm from './pages/TaskForm';
@@ -30,6 +31,7 @@ function App() {
           </main>
         </div>
       </Router>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }
